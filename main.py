@@ -73,7 +73,7 @@ else:
         print("Yorum çekme işlemi başarıyla tamamlandı.")
         driver.close()
         print(len(reviewList), "adet yorum çekildi.")
-        workbook = xlsxwriter.Workbook(title)
+        workbook = xlsxwriter.Workbook(title + ".xlsx")
         worksheet = workbook.add_worksheet()
         print(title, "adlı dosyaya yazılma işlemi başlatıldı.")
         row = 0
