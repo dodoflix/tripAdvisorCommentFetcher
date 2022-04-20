@@ -1,9 +1,13 @@
+import contextlib
+import os
 import time
 import xlsxwriter
 
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.expected_conditions import staleness_of
+from selenium.webdriver.support.wait import WebDriverWait
 
 
 def urlControl(tempUrl):
@@ -26,6 +30,9 @@ class Review:
         self.date = None
 
 
+path = "{}/storage".format(os.getcwd())
+if not os.path.exists(path):
+    os.makedirs(path)
 url = str(input("Lütfen URL'yi giriniz:"))
 if not urlControl(url):
     print("Hatalı veya eksik URL girdiniz!")
@@ -37,7 +44,6 @@ else:
     driver.get(url)
     time.sleep(3)
     try:
-        # Cookie Accept
         driver.find_element(By.ID, "onetrust-accept-btn-handler").click()
         pageNumbers = driver.find_element(By.CLASS_NAME, "pageNumbers")
         languageButton = driver.find_element(By.CLASS_NAME, "cvxmR")
@@ -54,7 +60,7 @@ else:
         nextButton = driver.find_element(By.CLASS_NAME, "ui_button.nav.next.primary")
         print("Yorum çekme işlemi başlatıldı!")
         for page in range(pageCount):
-            print((pageCount - 1) - page, "adet sayfa kaldı.")
+            print(pageCount - page, "adet sayfa kaldı.")
             reviewBox = driver.find_elements(By.CLASS_NAME, "cWwQK.MC.R2.Gi.z.Z.BB.dXjiy")
             for review in reviewBox:
                 tempReview = Review()
@@ -67,13 +73,17 @@ else:
                     review.find_element(By.CLASS_NAME, "CrxzX").text, "")[1::]
                 reviewList.append(tempReview)
             actions.move_to_element(nextButton).click()
-            if page != pageCount - 1:
+            if nextButton.is_enabled():
                 nextButton.click()
-                time.sleep(3)
+                i = False
+                while not i:
+                    tempelement = driver.find_element(By.CLASS_NAME, "cWwQK.MC.R2.Gi.z.Z.BB.dXjiy")
+                    if tempelement != reviewBox[0]:
+                        i = True
         print("Yorum çekme işlemi başarıyla tamamlandı.")
         driver.close()
         print(len(reviewList), "adet yorum çekildi.")
-        workbook = xlsxwriter.Workbook(title + ".xlsx")
+        workbook = xlsxwriter.Workbook(path + "/" + title + ".xlsx")
         worksheet = workbook.add_worksheet()
         print(title, "adlı dosyaya yazılma işlemi başlatıldı.")
         row = 0
