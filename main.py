@@ -1,24 +1,9 @@
-import contextlib
 import os
-import time
 import xlsxwriter
 
 from selenium import webdriver
-from selenium.webdriver.common.action_chains import ActionChains
+from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.expected_conditions import staleness_of
-from selenium.webdriver.support.wait import WebDriverWait
-
-
-def urlControl(tempUrl):
-    if type(tempUrl) != str:
-        return None
-    tempUrl = str(tempUrl)
-    list = tempUrl.split("/")
-    if not list[2].lower().startswith("www.tripadvisor.com") and list[3].lower().startswith("hotel_review"):
-        return False
-    else:
-        return True
 
 
 class Review:
@@ -33,73 +18,62 @@ class Review:
 path = "{}/storage".format(os.getcwd())
 if not os.path.exists(path):
     os.makedirs(path)
-url = str(input("Lütfen URL'yi giriniz:"))
-if not urlControl(url):
-    print("Hatalı veya eksik URL girdiniz!")
-else:
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
-    driver = webdriver.Chrome(options=options)
-    actions = ActionChains(driver)
-    driver.get(url)
-    time.sleep(3)
-    try:
-        driver.find_element(By.ID, "onetrust-accept-btn-handler").click()
-        pageNumbers = driver.find_element(By.CLASS_NAME, "pageNumbers")
-        languageButton = driver.find_element(By.CLASS_NAME, "cvxmR")
-        actions.move_to_element(languageButton).perform()
-        languageButton.click()
-        actions.move_to_element(pageNumbers).perform()
-        time.sleep(3)
-        title = driver.title
-        reviewCount = driver.find_element(By.CLASS_NAME, "cdKMr.Mc._R.b").text
-        reviewCount = int(reviewCount)
-        reviewBox = driver.find_elements(By.CLASS_NAME, "cWwQK.MC.R2.Gi.z.Z.BB.dXjiy")
-        pageCount = reviewCount // len(reviewBox)
-        reviewList = []
-        nextButton = driver.find_element(By.CLASS_NAME, "ui_button.nav.next.primary")
-        print("Yorum çekme işlemi başlatıldı!")
-        for page in range(pageCount):
-            print(pageCount - page, "adet sayfa kaldı.")
-            reviewBox = driver.find_elements(By.CLASS_NAME, "cWwQK.MC.R2.Gi.z.Z.BB.dXjiy")
-            for review in reviewBox:
-                tempReview = Review()
-                tempReview.username = review.find_element(By.CLASS_NAME, "ui_header_link.bPvDb").text
-                tempReview.point = int(
-                    review.find_element(By.CLASS_NAME, "ui_bubble_rating").get_attribute("class").split("_")[-1]) // 10
-                tempReview.title = review.find_element(By.CLASS_NAME, "fCitC").text
-                tempReview.text = review.find_element(By.CLASS_NAME, "XllAv.H4._a").text
-                tempReview.date = review.find_element(By.CLASS_NAME, "euPKI._R.Me.S4.H3").text.replace(
-                    review.find_element(By.CLASS_NAME, "CrxzX").text, "")[1::]
-                reviewList.append(tempReview)
-            actions.move_to_element(nextButton).click()
-            if nextButton.is_enabled():
-                nextButton.click()
-                i = False
-                while not i:
-                    tempelement = driver.find_element(By.CLASS_NAME, "cWwQK.MC.R2.Gi.z.Z.BB.dXjiy")
-                    if tempelement != reviewBox[0]:
-                        i = True
-        print("Yorum çekme işlemi başarıyla tamamlandı.")
-        driver.close()
-        print(len(reviewList), "adet yorum çekildi.")
-        workbook = xlsxwriter.Workbook(path + "/" + title + ".xlsx")
-        worksheet = workbook.add_worksheet()
-        print(title, "adlı dosyaya yazılma işlemi başlatıldı.")
-        row = 0
-        for review in reviewList:
-            column = 0
-            worksheet.write(row, column, review.username)
-            column += 1
-            worksheet.write(row, column, review.date)
-            column += 1
-            worksheet.write(row, column, review.point)
-            column += 1
-            worksheet.write(row, column, review.title)
-            column += 1
-            worksheet.write(row, column, review.text)
-            row += 1
-        print("Dosyaya yazılma işlemi başarıyla tamamlandı.")
-        workbook.close()
-    except NameError:
-        print("Bir hata oldu!")
+
+url = str(input("TripAdvisor URL:"))
+url = url.replace("-Reviews", "-Reviews%s")
+url = "{}#REVIEWS".format(url)
+
+options = webdriver.ChromeOptions()
+options.add_argument("--headless")
+driver = webdriver.Chrome(options=options)
+
+driver.get(url % "")
+driver.find_element(By.ID, "onetrust-accept-btn-handler").click()
+driver.find_element(By.CLASS_NAME, "bahwx.Vm._S").click()
+title = driver.title
+print("Comment fetching on", title, "has started.")
+
+reviewList = []
+
+content = driver.page_source
+soup = BeautifulSoup(content, 'lxml')
+count = 0
+reviewCount = int(soup.find('span', attrs={'class': 'cdKMr Mc _R b'}).text)
+nextButton = driver.find_element(By.CLASS_NAME, "ui_button.nav.next.primary")
+while count < reviewCount - 10:
+    print((reviewCount - count) / 10, "page(s) left.")
+    content = driver.page_source
+    soup = BeautifulSoup(content, 'lxml')
+    for reviewBox in soup.find_all('div', attrs={'class': 'cWwQK MC R2 Gi z Z BB dXjiy'}):
+        review = Review()
+        review.username = reviewBox.findNext('a', attrs={'class': 'ui_header_link bPvDb'}).text
+        review.point = reviewBox.findNext('span', attrs={'class': 'ui_bubble_rating'})['class'][-1][-2]
+        review.title = reviewBox.findNext('a', attrs={'class': 'fCitC'}).text
+        review.text = reviewBox.findNext('q', attrs={'class': 'XllAv H4 _a'}).text
+        review.date = reviewBox.findNext('span', attrs={'class': 'euPKI _R Me S4 H3'}).text.split(':')[-1][1::]
+        reviewList.append(review)
+    count += 10
+    nextButton.click()
+    x = driver.find_element(By.CLASS_NAME, "cWwQK.MC.R2.Gi.z.Z.BB.dXjiy")
+    y = driver.find_element(By.CLASS_NAME, "cWwQK.MC.R2.Gi.z.Z.BB.dXjiy")
+    while x == y:
+        y = driver.find_element(By.CLASS_NAME, "cWwQK.MC.R2.Gi.z.Z.BB.dXjiy")
+workbook = xlsxwriter.Workbook(path + "/" + title + ".xlsx")
+worksheet = workbook.add_worksheet()
+print("Writing to", title + ".xlsx")
+row = 0
+for review in reviewList:
+    column = 0
+    worksheet.write(row, column, review.username)
+    column += 1
+    worksheet.write(row, column, review.date)
+    column += 1
+    worksheet.write(row, column, review.point)
+    column += 1
+    worksheet.write(row, column, review.title)
+    column += 1
+    worksheet.write(row, column, review.text)
+    row += 1
+print("Writing finished successfully.")
+workbook.close()
+driver.close()
