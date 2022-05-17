@@ -46,11 +46,14 @@ while count < reviewCount - 10:
     soup = BeautifulSoup(content, 'lxml')
     for reviewBox in soup.find_all('div', attrs={'class': 'cWwQK MC R2 Gi z Z BB dXjiy'}):
         review = Review()
-        review.username = reviewBox.findNext('a', attrs={'class': 'ui_header_link bPvDb'}).text
-        review.point = reviewBox.findNext('span', attrs={'class': 'ui_bubble_rating'})['class'][-1][-2]
-        review.title = reviewBox.findNext('a', attrs={'class': 'fCitC'}).text
-        review.text = reviewBox.findNext('q', attrs={'class': 'XllAv H4 _a'}).text
-        review.date = reviewBox.findNext('span', attrs={'class': 'euPKI _R Me S4 H3'}).text.split(':')[-1][1::]
+        try:
+            review.username = reviewBox.findNext('a', attrs={'class': 'ui_header_link bPvDb'}).text
+            review.point = reviewBox.findNext('span', attrs={'class': 'ui_bubble_rating'})['class'][-1][-2]
+            review.title = reviewBox.findNext('a', attrs={'class': 'fCitC'}).text
+            review.text = reviewBox.findNext('q', attrs={'class': 'XllAv H4 _a'}).text
+            review.date = reviewBox.findNext('span', attrs={'class': 'euPKI _R Me S4 H3'}).text.split(':')[-1][1::]
+        except:
+            print("An error ocurred.")
         reviewList.append(review)
     count += 10
     nextButton.click()
