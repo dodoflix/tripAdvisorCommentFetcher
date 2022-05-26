@@ -1,4 +1,5 @@
 beautifulsoup4==4.11.1
+chromedriver_py==100.0.4896.60
 selenium==4.1.5
 translators==5.2.1
 XlsxWriter==3.0.3
