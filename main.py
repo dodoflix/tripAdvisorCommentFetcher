@@ -21,15 +21,16 @@ if not os.path.exists(path):
     os.makedirs(path)
 
 url = str(input("TripAdvisor URL: "))
+language = str(input("Language (en, tr): "))
 for i in url.split('/'):
     if "tripadvisor" in i:
+        x = i.split(".")
         if not i.endswith("com"):
-            x = i.split(".")
             x.pop(-1)
-            x = ".".join(x)
-            print(x)
-            url = url.replace(i, x)
-            print(url)
+        if language != "en":
+            x.append(language)
+        x = ".".join(x)
+        url = url.replace(i, x)
 url = "{}#REVIEWS".format(url)
 
 options = webdriver.ChromeOptions()
@@ -67,8 +68,8 @@ while count < reviewCount - 10:
             review.point = reviewBox.findNext('span', attrs={'class': 'ui_bubble_rating'})['class'][-1][-2]
             if translate:
                 print("(Auto Translating) This comment will take a second..")
-                review.title = ts.google(reviewBox.findNext('a', attrs={'class': 'fCitC'}).text)
-                review.text = ts.google(reviewBox.findNext('q', attrs={'class': 'XllAv H4 _a'}).text)
+                review.title = ts.google(reviewBox.findNext('a', attrs={'class': 'fCitC'}).text, to_language=language)
+                review.text = ts.google(reviewBox.findNext('q', attrs={'class': 'XllAv H4 _a'}).text, to_language=language)
             else:
                 review.title = reviewBox.findNext('a', attrs={'class': 'fCitC'}).text
                 review.text = reviewBox.findNext('q', attrs={'class': 'XllAv H4 _a'}).text
