@@ -1,6 +1,7 @@
 import os
 import xlsxwriter
 
+import translators as ts
 from selenium import webdriver
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
@@ -19,12 +20,12 @@ path = "{}/storage".format(os.getcwd())
 if not os.path.exists(path):
     os.makedirs(path)
 
-url = str(input("TripAdvisor URL:"))
+url = str(input("TripAdvisor URL: "))
 url = url.replace("-Reviews", "-Reviews%s")
 url = "{}#REVIEWS".format(url)
 
 options = webdriver.ChromeOptions()
-options.add_argument("--headless")
+# options.add_argument("--headless")
 driver = webdriver.Chrome(options=options)
 
 driver.get(url % "")
@@ -45,12 +46,24 @@ while count < reviewCount - 10:
     content = driver.page_source
     soup = BeautifulSoup(content, 'lxml')
     for reviewBox in soup.find_all('div', attrs={'class': 'cWwQK MC R2 Gi z Z BB dXjiy'}):
+        translate = False
+        try:
+            test = reviewBox.findNext('div', attrs={'class': 'czOXw bKVIS'})
+            if test.findParent('div', attrs={'class': 'cWwQK MC R2 Gi z Z BB dXjiy'}) == reviewBox:
+                translate = True
+        except:
+            translate = False
         review = Review()
         try:
             review.username = reviewBox.findNext('a', attrs={'class': 'ui_header_link bPvDb'}).text
             review.point = reviewBox.findNext('span', attrs={'class': 'ui_bubble_rating'})['class'][-1][-2]
-            review.title = reviewBox.findNext('a', attrs={'class': 'fCitC'}).text
-            review.text = reviewBox.findNext('q', attrs={'class': 'XllAv H4 _a'}).text
+            if translate:
+                print("(Auto Translating) This comment will take a second..")
+                review.title = ts.google(reviewBox.findNext('a', attrs={'class': 'fCitC'}).text)
+                review.text = ts.google(reviewBox.findNext('q', attrs={'class': 'XllAv H4 _a'}).text)
+            else:
+                review.title = reviewBox.findNext('a', attrs={'class': 'fCitC'}).text
+                review.text = reviewBox.findNext('q', attrs={'class': 'XllAv H4 _a'}).text
             review.date = reviewBox.findNext('span', attrs={'class': 'euPKI _R Me S4 H3'}).text.split(':')[-1][1::]
         except:
             print("An error ocurred.")
