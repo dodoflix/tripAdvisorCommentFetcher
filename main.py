@@ -1,9 +1,11 @@
 import os
 import xlsxwriter
-
 import translators as ts
+
 from selenium import webdriver
+from chromedriver_py import binary_path
 from bs4 import BeautifulSoup
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 
 
@@ -34,8 +36,10 @@ for i in url.split('/'):
 url = "{}#REVIEWS".format(url)
 
 options = webdriver.ChromeOptions()
+options.add_experimental_option('excludeSwitches', ['enable-logging'])
 options.add_argument("--headless")
-driver = webdriver.Chrome(options=options)
+service_object = Service(binary_path)
+driver = webdriver.Chrome(options=options, service=service_object)
 
 driver.get(url)
 driver.find_element(By.ID, "onetrust-accept-btn-handler").click()
@@ -48,10 +52,11 @@ reviewList = []
 content = driver.page_source
 soup = BeautifulSoup(content, 'lxml')
 count = 0
+pageCommentCount = len(soup.findAll('div', attrs={'class': 'cWwQK MC R2 Gi z Z BB dXjiy'}))
 reviewCount = int(soup.find('span', attrs={'class': 'cdKMr Mc _R b'}).text)
 nextButton = driver.find_element(By.CLASS_NAME, "ui_button.nav.next.primary")
-while count < reviewCount - 10:
-    print((reviewCount - count) / 10, "page(s) left.")
+while count < reviewCount - pageCommentCount:
+    print((reviewCount - count) / pageCommentCount, "page(s) left.")
     content = driver.page_source
     soup = BeautifulSoup(content, 'lxml')
     for reviewBox in soup.find_all('div', attrs={'class': 'cWwQK MC R2 Gi z Z BB dXjiy'}):
@@ -77,7 +82,7 @@ while count < reviewCount - 10:
         except:
             print("An error ocurred.")
         reviewList.append(review)
-    count += 10
+    count += pageCommentCount
     nextButton.click()
     x = driver.find_element(By.CLASS_NAME, "cWwQK.MC.R2.Gi.z.Z.BB.dXjiy")
     y = driver.find_element(By.CLASS_NAME, "cWwQK.MC.R2.Gi.z.Z.BB.dXjiy")
