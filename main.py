@@ -21,14 +21,22 @@ if not os.path.exists(path):
     os.makedirs(path)
 
 url = str(input("TripAdvisor URL: "))
-url = url.replace("-Reviews", "-Reviews%s")
+for i in url.split('/'):
+    if "tripadvisor" in i:
+        if not i.endswith("com"):
+            x = i.split(".")
+            x.pop(-1)
+            x = ".".join(x)
+            print(x)
+            url = url.replace(i, x)
+            print(url)
 url = "{}#REVIEWS".format(url)
 
 options = webdriver.ChromeOptions()
-# options.add_argument("--headless")
+options.add_argument("--headless")
 driver = webdriver.Chrome(options=options)
 
-driver.get(url % "")
+driver.get(url)
 driver.find_element(By.ID, "onetrust-accept-btn-handler").click()
 driver.find_element(By.CLASS_NAME, "bahwx.Vm._S").click()
 title = driver.title
